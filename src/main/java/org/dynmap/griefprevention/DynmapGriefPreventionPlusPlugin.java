@@ -1,6 +1,5 @@
 package org.dynmap.griefprevention;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,10 +10,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import me.ryanhamshire.GriefPrevention.Claim;
-import me.ryanhamshire.GriefPrevention.DataStore;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
-
+import net.kaikk.mc.gpp.Claim;
+import net.kaikk.mc.gpp.DataStore;
+import net.kaikk.mc.gpp.GriefPreventionPlus;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -30,7 +28,7 @@ import org.dynmap.markers.AreaMarker;
 import org.dynmap.markers.MarkerAPI;
 import org.dynmap.markers.MarkerSet;
 
-public class DynmapGriefPreventionPlugin extends JavaPlugin {
+public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
     private static Logger log;
     private static final String DEF_INFOWINDOW = "div class=\"infowindow\">Claim Owner: <span style=\"font-weight:bold;\">%owner%</span><br/>Permission Trust: <span style=\"font-weight:bold;\">%managers%</span><br/>Trust: <span style=\"font-weight:bold;\">%builders%</span><br/>Container Trust: <span style=\"font-weight:bold;\">%containers%</span><br/>Access Trust: <span style=\"font-weight:bold;\">%accessors%</span></div>";
     private static final String DEF_ADMININFOWINDOW = "<div class=\"infowindow\"><span style=\"font-weight:bold;\">Administrator Claim</span><br/>Permission Trust: <span style=\"font-weight:bold;\">%managers%</span><br/>Trust: <span style=\"font-weight:bold;\">%builders%</span><br/>Container Trust: <span style=\"font-weight:bold;\">%containers%</span><br/>Access Trust: <span style=\"font-weight:bold;\">%accessors%</span></div>";
@@ -38,7 +36,7 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
     Plugin dynmap;
     DynmapAPI api;
     MarkerAPI markerapi;
-    GriefPrevention gp;
+    GriefPreventionPlus gpp;
     
     FileConfiguration cfg;
     MarkerSet set;
@@ -99,7 +97,7 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
                 //doUpdate = false;
                 updateClaims();
                 if (repeat) {
-                    getServer().getScheduler().scheduleSyncDelayedTask(DynmapGriefPreventionPlugin.this, new GriefPreventionUpdate(), updperiod);
+                    getServer().getScheduler().scheduleSyncDelayedTask(DynmapGriefPreventionPlusPlugin.this, new GriefPreventionUpdate(), updperiod);
                 }
             }
         }
@@ -118,8 +116,9 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
         ArrayList<String> builders = new ArrayList<String>();
         ArrayList<String> containers = new ArrayList<String>();
         ArrayList<String> accessors = new ArrayList<String>();
+        ArrayList<String> enters = new ArrayList<String>();
         ArrayList<String> managers = new ArrayList<String>();
-        claim.getPermissions(builders, containers, accessors, managers);
+        claim.getPermissions(builders, containers, accessors, enters,managers);
         /* Build builders list */
         String accum = "";
         for(int i = 0; i < builders.size(); i++) {
@@ -208,7 +207,7 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
             x[1] = l0.getX(); z[1] = l1.getZ() + 1.0;
             x[2] = l1.getX() + 1.0; z[2] = l1.getZ() + 1.0;
             x[3] = l1.getX() + 1.0; z[3] = l0.getZ();
-            Long id = claim.getID();
+            Integer id = claim.getID();
             String markerid = "GP_" + Long.toHexString(id);
             AreaMarker m = resareas.remove(markerid); /* Existing area? */
             if(m == null) {
@@ -241,7 +240,7 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
     private void updateClaims() {
         Map<String,AreaMarker> newmap = new HashMap<String,AreaMarker>(); /* Build new map */
  
-        DataStore ds = gp.dataStore;
+        DataStore ds = gpp.getDataStore();
         
         ArrayList<Claim> claims = null;
         try {
@@ -249,9 +248,7 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
             fld.setAccessible(true);
             Object o = fld.get(ds);
             claims = (ArrayList<Claim>)o;
-        } catch (NoSuchFieldException e) {
-        } catch (IllegalArgumentException e) {
-        } catch (IllegalAccessException e) {
+        } catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
         }
         /* If claims, process them */
         if(claims != null) {
@@ -263,9 +260,9 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
             int idx = sz;
             for(int i = 0; i < sz; i++) {
                 Claim claim = claims.get(i);
-                if((claim.children != null) && (claim.children.size() > 0)) {
-                    for(int j = 0; j < claim.children.size(); j++) {
-                        handleClaim(idx, claim.children.get(j), newmap);
+                if((claim.getChildren() != null) && (claim.getChildren().size() > 0)) {
+                    for(int j = 0; j < claim.getChildren().size(); j++) {
+                        handleClaim(idx, claim.getChildren().get(j), newmap);
                         idx++;
                     }
                 }
@@ -284,8 +281,8 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
         public void onPluginEnable(PluginEnableEvent event) {
             Plugin p = event.getPlugin();
             String name = p.getDescription().getName();
-            if(name.equals("dynmap") || name.equals("GriefPrevention")) {
-                if(dynmap.isEnabled() && gp.isEnabled())
+            if(name.equals("dynmap") || name.equals("GriefPreventionPlus")) {
+                if(dynmap.isEnabled() && gpp.isEnabled())
                     activate();
             }
         }
@@ -307,33 +304,14 @@ public class DynmapGriefPreventionPlugin extends JavaPlugin {
             severe("Cannot find GriefPrevention!");
             return;
         }
-        gp = (GriefPrevention)p;
+        gpp = (GriefPreventionPlus)p;
 
         getServer().getPluginManager().registerEvents(new OurServerListener(), this);        
         /* If both enabled, activate */
-        if(dynmap.isEnabled() && gp.isEnabled())
+        if(dynmap.isEnabled() && gpp.isEnabled())
             activate();
-        
-        try {
-            MetricsLite ml = new MetricsLite(this);
-            ml.start();
-        } catch (IOException iox) {
-        }
     }
     private boolean reload = false;
-    /*
-    private boolean doUpdate = false;
-    
-    private class GPListener implements Listener {
-        private void doUpdate() {
-            if (!doUpdate) {
-                doUpdate = true;
-                GriefPreventionUpdate gp = new GriefPreventionUpdate();
-                gp.repeat = false;
-                getServer().getScheduler().scheduleSyncDelayedTask(DynmapGriefPreventionPlugin.this, gp, 5 * 20);
-            }
-        }
-    }*/
     
     private void activate() {
         /* Now, get markers API */

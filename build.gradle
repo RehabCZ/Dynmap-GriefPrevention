@@ -1,0 +1,36 @@
+group 'org.dynmap'
+version '1.0'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+compileJava.options.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+    mavenCentral()
+    maven {
+        name = 'spigotmc-repo'
+        url = 'https://hub.spigotmc.org/nexus/content/groups/public/'
+    }
+    maven {
+        name = 'dynmap-repo'
+        url = 'http://repo.mikeprimm.com/'
+        allowInsecureProtocol = true
+    }
+}
+
+dependencies {
+    compileOnly 'us.dynmap:dynmap-api:2.1'
+    compileOnly name: "GriefPreventionPlus-13.4"
+    compileOnly 'org.bukkit:bukkit:1.12.2-R0.1-SNAPSHOT'
+
+    compileOnly 'org.jetbrains:annotations:23.0.0'
+}
