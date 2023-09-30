@@ -30,7 +30,7 @@ import org.dynmap.markers.MarkerSet;
 
 public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
     private static Logger log;
-    private static final String DEF_INFOWINDOW = "div class=\"infowindow\">Claim Owner: <span style=\"font-weight:bold;\">%owner%</span><br/>Permission Trust: <span style=\"font-weight:bold;\">%managers%</span><br/>Trust: <span style=\"font-weight:bold;\">%builders%</span><br/>Container Trust: <span style=\"font-weight:bold;\">%containers%</span><br/>Access Trust: <span style=\"font-weight:bold;\">%accessors%</span></div>";
+    private static final String DEF_INFOWINDOW = "<div class=\"infowindow\">Claim Owner: <span style=\"font-weight:bold;\">%owner%</span><br/>Permission Trust: <span style=\"font-weight:bold;\">%managers%</span><br/>Trust: <span style=\"font-weight:bold;\">%builders%</span><br/>Container Trust: <span style=\"font-weight:bold;\">%containers%</span><br/>Access Trust: <span style=\"font-weight:bold;\">%accessors%</span></div>";
     private static final String DEF_ADMININFOWINDOW = "<div class=\"infowindow\"><span style=\"font-weight:bold;\">Administrator Claim</span><br/>Permission Trust: <span style=\"font-weight:bold;\">%managers%</span><br/>Trust: <span style=\"font-weight:bold;\">%builders%</span><br/>Container Trust: <span style=\"font-weight:bold;\">%containers%</span><br/>Access Trust: <span style=\"font-weight:bold;\">%accessors%</span></div>";
     private static final String ADMIN_ID = "administrator";
     Plugin dynmap;
@@ -94,7 +94,6 @@ public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
         
         public void run() {
             if(!stop) {
-                //doUpdate = false;
                 updateClaims();
                 if (repeat) {
                     getServer().getScheduler().scheduleSyncDelayedTask(DynmapGriefPreventionPlusPlugin.this, new GriefPreventionUpdate(), updperiod);
@@ -242,20 +241,20 @@ public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
  
         DataStore ds = gpp.getDataStore();
         
-        ArrayList<Claim> claims = null;
+        Map<Integer, Claim> claims = null;
         try {
             Field fld = DataStore.class.getDeclaredField("claims");
             fld.setAccessible(true);
             Object o = fld.get(ds);
-            claims = (ArrayList<Claim>)o;
+            claims = (Map<Integer, Claim>)o;
         } catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
         }
         /* If claims, process them */
         if(claims != null) {
             int sz = claims.size();
-            for(int i = 0; i < sz; i++) {
-                Claim claim = claims.get(i);
-                handleClaim(i, claim, newmap);
+            for(Map.Entry<Integer,Claim> entry : claims.entrySet()) {
+                Claim claim = entry.getValue();
+                handleClaim(entry.getKey(), claim, newmap);
             }
             int idx = sz;
             for(int i = 0; i < sz; i++) {
@@ -299,9 +298,9 @@ public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
         }
         api = (DynmapAPI)dynmap; /* Get API */
         /* Get GriefPrevention */
-        Plugin p = pm.getPlugin("GriefPrevention");
+        Plugin p = pm.getPlugin("GriefPreventionPlus");
         if(p == null) {
-            severe("Cannot find GriefPrevention!");
+            severe("Cannot find GriefPreventionPlus!");
             return;
         }
         gpp = (GriefPreventionPlus)p;
@@ -383,8 +382,6 @@ public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
         stop = false;
         
         getServer().getScheduler().scheduleSyncDelayedTask(this, new GriefPreventionUpdate(), 40);   /* First time is 2 seconds */
-
-        //getServer().getPluginManager().registerEvents(new GPListener(), this);        
 
         info("version " + this.getDescription().getVersion() + " is activated");
     }
