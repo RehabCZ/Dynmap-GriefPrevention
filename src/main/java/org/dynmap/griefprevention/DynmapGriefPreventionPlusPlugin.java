@@ -193,7 +193,7 @@ public class DynmapGriefPreventionPlusPlugin extends JavaPlugin {
         double[] z = null;
         Location l0 = claim.getLesserBoundaryCorner();
         Location l1 = claim.getGreaterBoundaryCorner();
-        if(l0 == null)
+        if(l0 == null || l0.getWorld() == null)
             return;
         String wname = l0.getWorld().getName();
         String owner = claim.isAdminClaim()?ADMIN_ID:claim.getOwnerName();
